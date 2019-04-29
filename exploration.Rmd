@@ -35,9 +35,16 @@ bf <- read.csv("dataset.csv", header=T)
 summary(bf)
 head(bf)
 
+
+ggplot(data = bf) + 
+  geom_bar(mapping = aes(x = Age, y = ..count.., fill = Age)) + 
+  labs(title = 'Age of Customers')
+```
+
+```{r gender}
 bf_gender = bf %>% select(User_ID, Gender) %>% group_by(User_ID) %>% distinct()
 summary(bf_gender)
-ggplot(data = bf) + 
+ggplot(data = bf_gender) + 
   geom_bar(mapping = aes(x = Age, y = ..count.., fill = Age)) + 
   labs(title = 'Age of Customers')
 ```

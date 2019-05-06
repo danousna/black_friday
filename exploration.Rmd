@@ -136,7 +136,6 @@ Sociologie
 Commercial
 
 - Performance des produit (via ID)
-<<<<<<< HEAD
 - Catégorie de produit qui se vendent le mieux
 
 ## Visu
@@ -190,7 +189,7 @@ ggplot(bf, aes(x = Age, y = Purchase, fill=Age)) +
 ```
 
 
-# Mesure de l'entropiue et du gain d'entropie
+# Mesure de l'entropie et du gain d'entropie
 
 ```{r entropy}
 library(entropy)
@@ -223,6 +222,3 @@ sapply(c('Age', 'Gender', 'Stay_In_Current_City_Years', 'Occupation', 'Marital_S
 })
 ```
 Deux catégories importantes : Age et Occupation. 
-=======
-- Catégorie de produit qui se vendent le mieux
->>>>>>> master

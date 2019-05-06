@@ -30,14 +30,85 @@ Commercial
 
 ## Visu
 
-```{r gender}
+```{r readcsvdata}
 bf <- read.csv("dataset.csv", header=T)
+bf$Marital_Status = factor(
+  bf$Marital_Status,
+  levels=c('1','0')
+)
+bf$Stay_In_Current_City_Years = factor(
+  bf$Stay_In_Current_City_Years,
+  levels=c('0','1','2','3','4+'),
+  ordered = TRUE
+)
+bf$Stay_In_Current_City_Years = factor(
+  bf$Stay_In_Current_City_Years,
+  levels=c('0','1','2','3','4+'),
+  ordered = TRUE
+)
+bf$Occupation = factor(
+  bf$Occupation,
+  levels=0:20
+)
 summary(bf)
 head(bf)
+```
 
+```{r gender}
 bf_gender = bf %>% select(User_ID, Gender) %>% group_by(User_ID) %>% distinct()
 summary(bf_gender)
 ggplot(data = bf) + 
-  geom_bar(mapping = aes(x = Age, y = ..count.., fill = Age)) + 
-  labs(title = 'Age of Customers')
+  geom_bar(mapping = aes(x = Age, y = ..count.., fill = Age), position=position_dodge()) + 
+  labs(title = 'Age and gender of Customers')
 ```
+
+```{r total}
+purchase_sum = aggregate(bf$Purchase,
+          list(User_ID = bf$User_ID, Gender = bf$Gender, City_Category = bf$City_Category, Age = bf$Age),
+          sum)
+
+summary(purchase_sum)
+ggplot(purchase_sum, aes(x = Age, y = x, fill=Age)) + 
+  geom_bar(stat = "summary", fun.y = "mean") +
+  labs(title = 'Avg total purchase depending on the age of Customers')
+```
+```{r}
+ggplot(bf, aes(x = Age, y = Purchase, fill=Age)) + 
+  geom_bar(stat = "count", fun.y = "count") +
+  labs(title = 'Avg total purchase depending on the age of Customers')
+```
+
+
+# Mesure de l'entropiue et du gain d'entropie
+
+```{r entropy}
+library(entropy)
+
+global_sells = bf %>%
+  select(Product_ID) %>%
+  group_by(Product_ID) %>%
+  summarise(count=n())
+global_sells_sum = sum(global_sells$count)
+global_sells$prob = global_sells$count / global_sells_sum
+
+sapply(c('Age', 'Gender', 'Stay_In_Current_City_Years', 'Occupation', 'Marital_Status', 'City_Category'), function(test){
+  discriminators = levels(bf[,test])
+  sells_city = sapply(discriminators, function(category){
+    sells = bf[bf[,test] == category,] %>%
+      select(Product_ID) %>%
+      group_by(Product_ID) %>%
+      summarise(count=n())
+    s <- sum(sells$count)
+    sells$prob = sells$count / sum(sells$count)
+    return(list(prob=sells$prob, sum=s))
+  })
+  
+  entropy_sum <- function(acc,cur) {
+    acc + entropy(sells_city[,cur]$prob) *  sells_city[, cur]$sum / global_sells_sum # 
+  }
+  
+  entropy_gain = entropy(global_sells$prob) - Reduce(entropy_sum, discriminators, 0)
+  entropy_gain
+})
+```
+Deux catégories importantes : Age et Occupation. 

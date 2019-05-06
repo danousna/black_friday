@@ -28,7 +28,7 @@ kable(types_table, caption = "Dictionnaire des données")
 
 Remarque :
 
-- Un produit a obligatoirement une catégorie (Product_Category_1 ne contient pas de <NA>). Il n'a pas obligatoirement de 2ème et 3ème catégorie.
+- Un produit a obligatoirement une catégorie (Product_Category_1 ne contient pas de NA). Il n'a pas obligatoirement de 2ème et 3ème catégorie.
 
 ```{r types}
 bf$Occupation <- factor(bf$Occupation, levels = c('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20'))
@@ -118,6 +118,8 @@ ggplot(data = bf.by_product_id[1:25,], aes(x = reorder(Product_ID, -Purchase), y
   geom_bar(stat = 'identity') +
   labs(title = 'Classement des 25 meilleurs produits selon le nombre de ventes')
 ```
+
+Pas de produit que se détache du reste (du moins dans les 25 premiers, il faut garder à l'esprit qu'il y en a +3000).
 
 ## Relations
 

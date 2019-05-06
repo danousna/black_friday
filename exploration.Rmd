@@ -60,11 +60,55 @@ La distribution de l'age dans une population suit habituellement une loi normale
 
 ### Métier
 
+```{r, echo=FALSE}
+ggplot(data = bf) + 
+  geom_bar(mapping = aes(x = Occupation, y = ..count.., fill = Occupation)) + 
+  labs(title = 'Métier des clients')
+```
+
 ### Type de ville
+
+```{r, echo=FALSE}
+ggplot(data = bf) + 
+  geom_bar(mapping = aes(x = City_Category, y = ..count.., fill = City_Category)) + 
+  labs(title = 'Type de ville des clients')
+```
 
 ### Ancienneté dans la ville
 
+```{r, echo=FALSE}
+ggplot(data = bf) + 
+  geom_bar(mapping = aes(x = Stay_In_Current_City_Years, y = ..count.., fill = Stay_In_Current_City_Years)) + 
+  labs(title = 'Ancienneté dans la ville des clients')
+```
+
 ### Situation conjugale
+
+```{r, echo=FALSE}
+ggplot(data = bf) + 
+  geom_bar(mapping = aes(x = Marital_Status, y = ..count.., fill = Marital_Status)) + 
+  labs(title = 'Situation conjugale des clients')
+```
+
+### Catégories des produits
+
+```{r, echo=FALSE}
+ggplot(data = bf) + 
+  geom_bar(mapping = aes(x = Product_Category_1, y = ..count.., fill = Product_Category_1)) + 
+  labs(title = 'Catégorie de produit 1')
+```
+
+```{r, echo=FALSE}
+ggplot(data = bf) + 
+  geom_bar(mapping = aes(x = Product_Category_2, y = ..count.., fill = Product_Category_2)) + 
+  labs(title = 'Catégorie de produit 2')
+```
+
+```{r, echo=FALSE}
+ggplot(data = bf) + 
+  geom_bar(mapping = aes(x = Product_Category_3, y = ..count.., fill = Product_Category_3)) + 
+  labs(title = 'Catégorie de produit 3')
+```
 
 ## Relations
 

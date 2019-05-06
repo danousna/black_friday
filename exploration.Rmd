@@ -4,8 +4,10 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
+library(knitr)
+bf <- read.csv("dataset.csv", header=T)
 ```
 
 ## Description
@@ -13,7 +15,113 @@ Ces données sont les ventes provenant d'un seul magasin lors du Black Friday.
 Le magasin veut mieux comprendre le comportement des consommateur sur différents produits.
 Selon Kaggle, le problème principal est un problème de regression. On essaie de prédire la variable quantité d'achat à l'aide des autres variables. Ce problème peut également être vu comme un problème de régression.
 
-## Questions que l'on peut se poser
+## Types et granularité
+
+```{r types_table}
+types_table <- data.frame(
+  Champ = c("Purchase", "User_ID", "Product_ID", "Gender", "Age", "Occupation", "City_Category", "Stay_In_Current_City_Years", "Marital_Status", "Product_Category_1", "Product_Category_2", "Product_Category_3"),
+  Type = c("Quantitative", "Ordinal", "Nominal", "Nominal", "Ordinal", "Nominal", "Nominal", "Ordinal", "Nominal", "Nominal", "Nominal", "Nominal"),
+  Modalités = c("", "", "", "F, M", "0-17 -> ... -> 51-55 -> 55+", "0 -> 20", "A, B, C", "0, 1, 2, 3, 4+", "0, 1", "1 -> 18", "2 -> 18 (avec NA)", "3 -> 18 (avec NA)")
+)
+kable(types_table, caption = "Dictionnaire des données")
+```
+
+Remarque :
+
+- Un produit a obligatoirement une catégorie (Product_Category_1 ne contient pas de NA). Il n'a pas obligatoirement de 2ème et 3ème catégorie.
+
+```{r types}
+bf$Occupation <- factor(bf$Occupation, levels = c('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20'))
+bf$Marital_Status <- factor(bf$Marital_Status, levels = c('0', '1'))
+bf$Product_Category_1 <- factor(bf$Product_Category_1, levels = c('1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18'))
+bf$Product_Category_2 <- factor(bf$Product_Category_2, levels = c('2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18'))
+bf$Product_Category_3 <- factor(bf$Product_Category_3, levels = c('3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18'))
+```
+
+## Distribution
+
+### Sexe
+
+```{r}
+ggplot(data = bf) + 
+  geom_bar(mapping = aes(x = Gender, y = ..count.., fill = Gender)) + 
+  labs(title = 'Sexe des clients')
+```
+
+### Age
+
+```{r}
+ggplot(data = bf) + 
+  geom_bar(mapping = aes(x = Age, y = ..count.., fill = Age)) + 
+  labs(title = 'Age des clients')
+```
+
+La distribution de l'age dans une population suit habituellement une loi normale. On observe ici que ce n'est pas le cas. Il apparait que la tranche d'âge des 26-35 effectue le plus d'achats lors du Black Friday.
+
+### Métier
+
+```{r}
+ggplot(data = bf) + 
+  geom_bar(mapping = aes(x = Occupation, y = ..count.., fill = Occupation)) + 
+  labs(title = 'Métier des clients')
+```
+
+### Type de ville
+
+```{r}
+ggplot(data = bf) + 
+  geom_bar(mapping = aes(x = City_Category, y = ..count.., fill = City_Category)) + 
+  labs(title = 'Type de ville des clients')
+```
+
+### Ancienneté dans la ville
+
+```{r}
+ggplot(data = bf) + 
+  geom_bar(mapping = aes(x = Stay_In_Current_City_Years, y = ..count.., fill = Stay_In_Current_City_Years)) + 
+  labs(title = 'Ancienneté dans la ville des clients')
+```
+
+### Situation conjugale
+
+```{r}
+ggplot(data = bf) + 
+  geom_bar(mapping = aes(x = Marital_Status, y = ..count.., fill = Marital_Status)) + 
+  labs(title = 'Situation conjugale des clients')
+```
+
+### Catégories des produits
+
+```{r}
+ggplot(data = bf) + 
+  geom_bar(mapping = aes(x = Product_Category_1, y = ..count.., fill = Product_Category_1)) + 
+  labs(title = 'Catégorie de produit 1')
+```
+
+```{r}
+ggplot(data = bf) + 
+  geom_bar(mapping = aes(x = Product_Category_2, y = ..count.., fill = Product_Category_2)) + 
+  labs(title = 'Catégorie de produit 2')
+```
+
+```{r}
+ggplot(data = bf) + 
+  geom_bar(mapping = aes(x = Product_Category_3, y = ..count.., fill = Product_Category_3)) + 
+  labs(title = 'Catégorie de produit 3')
+```
+
+### Performance des produits
+
+```{r}
+bf.by_product_id <- bf %>% group_by(Product_ID) %>% summarise(Purchase = sum(Purchase)) %>% arrange(desc(Purchase))
+ggplot(data = bf.by_product_id[1:25,], aes(x = reorder(Product_ID, -Purchase), y = Purchase)) +
+  geom_bar(stat = 'identity') +
+  labs(title = 'Classement des 25 meilleurs produits selon le nombre de ventes')
+```
+
+Pas de produit que se détache du reste (du moins dans les 25 premiers, il faut garder à l'esprit qu'il y en a +3000).
+
+## Relations
 
 Sociologie
 
@@ -23,9 +131,12 @@ Sociologie
 - Marié, pas marié
 - Sexe
 
+=> Montant achat en fonction de l'age, métier, etc...
+
 Commercial
 
 - Performance des produit (via ID)
+<<<<<<< HEAD
 - Catégorie de produit qui se vendent le mieux
 
 ## Visu
@@ -112,3 +223,6 @@ sapply(c('Age', 'Gender', 'Stay_In_Current_City_Years', 'Occupation', 'Marital_S
 })
 ```
 Deux catégories importantes : Age et Occupation. 
+=======
+- Catégorie de produit qui se vendent le mieux
+>>>>>>> master

@@ -58,6 +58,18 @@ ggplot(data = bf) +
 
 La distribution de l'age dans une population suit habituellement une loi normale. On observe ici que ce n'est pas le cas. Il apparait que la tranche d'âge des 26-35 effectue le plus d'achats lors du Black Friday.
 
+```{r}
+purchase_sum = aggregate(
+  bf$Purchase, 
+  list(User_ID = bf$User_ID, Gender = bf$Gender, City_Category = bf$City_Category, Age = bf$Age), 
+  sum
+)
+
+ggplot(purchase_sum, aes(x = Age, y = x, fill=Age)) + 
+  geom_bar(stat = "summary", fun.y = "mean") +
+  labs(title = 'Dépenses total selon l\'âge')
+```
+
 ### Métier
 
 ```{r}
@@ -138,58 +150,9 @@ Commercial
 - Performance des produit (via ID)
 - Catégorie de produit qui se vendent le mieux
 
-## Visu
+## Mesure de l'entropie et du gain d'entropie
 
-```{r readcsvdata}
-bf <- read.csv("dataset.csv", header=T)
-bf$Marital_Status = factor(
-  bf$Marital_Status,
-  levels=c('1','0')
-)
-bf$Stay_In_Current_City_Years = factor(
-  bf$Stay_In_Current_City_Years,
-  levels=c('0','1','2','3','4+'),
-  ordered = TRUE
-)
-bf$Stay_In_Current_City_Years = factor(
-  bf$Stay_In_Current_City_Years,
-  levels=c('0','1','2','3','4+'),
-  ordered = TRUE
-)
-bf$Occupation = factor(
-  bf$Occupation,
-  levels=0:20
-)
-summary(bf)
-head(bf)
-```
-
-```{r gender}
-bf_gender = bf %>% select(User_ID, Gender) %>% group_by(User_ID) %>% distinct()
-summary(bf_gender)
-ggplot(data = bf) + 
-  geom_bar(mapping = aes(x = Age, y = ..count.., fill = Age), position=position_dodge()) + 
-  labs(title = 'Age and gender of Customers')
-```
-
-```{r total}
-purchase_sum = aggregate(bf$Purchase,
-          list(User_ID = bf$User_ID, Gender = bf$Gender, City_Category = bf$City_Category, Age = bf$Age),
-          sum)
-
-summary(purchase_sum)
-ggplot(purchase_sum, aes(x = Age, y = x, fill=Age)) + 
-  geom_bar(stat = "summary", fun.y = "mean") +
-  labs(title = 'Avg total purchase depending on the age of Customers')
-```
-```{r}
-ggplot(bf, aes(x = Age, y = Purchase, fill=Age)) + 
-  geom_bar(stat = "count", fun.y = "count") +
-  labs(title = 'Avg total purchase depending on the age of Customers')
-```
-
-
-# Mesure de l'entropie et du gain d'entropie
+TODO: A expliquer et justifier et synthétiser.
 
 ```{r entropy}
 library(entropy)
@@ -221,4 +184,5 @@ sapply(c('Age', 'Gender', 'Stay_In_Current_City_Years', 'Occupation', 'Marital_S
   entropy_gain
 })
 ```
+
 Deux catégories importantes : Age et Occupation. 

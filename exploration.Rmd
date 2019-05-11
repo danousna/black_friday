@@ -1,12 +1,18 @@
 ---
 title: "Exploration des données"
-output: html_document
+author: Arnaud Vanholderbeke, Benjamin Loriot et Natan Danous
+date: 11 Mai 2019
+output:
+  pdf_document:
+    toc: true
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(knitr)
+library(reshape2)
 bf <- read.csv("dataset.csv", header=T)
 ```
 
@@ -125,30 +131,16 @@ ggplot(data = bf) +
 ### Performance des produits
 
 ```{r}
-bf.by_product_id <- bf %>% group_by(Product_ID) %>% summarise(Purchase = sum(Purchase)) %>% arrange(desc(Purchase))
-ggplot(data = bf.by_product_id[1:25,], aes(x = reorder(Product_ID, -Purchase), y = Purchase)) +
+bf.by_product_id <- bf %>% group_by(Product_ID) %>% summarise(Quantity = n()) %>% arrange(desc(Quantity))
+ggplot(data = bf.by_product_id[1:25,], aes(x = reorder(Product_ID, -Quantity), y = Quantity)) +
   geom_bar(stat = 'identity') +
-  labs(title = 'Classement des 25 meilleurs produits selon le nombre de ventes')
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, 
+                                   size = 12, hjust = 1)) +
+  labs(title = 'Classement des 25 meilleurs produits selon le nombre de ventes', x = 'Product ID', y = 'Quantité vendue')
 ```
 
-Pas de produit que se détache du reste (du moins dans les 25 premiers, il faut garder à l'esprit qu'il y en a +3000).
-
-## Relations
-
-Sociologie
-
-- Age
-- Métier
-- Ancienneté dans la ville
-- Marié, pas marié
-- Sexe
-
-=> Montant achat en fonction de l'age, métier, etc...
-
-Commercial
-
-- Performance des produit (via ID)
-- Catégorie de produit qui se vendent le mieux
+Le premier produit se détache du reste.
 
 ## Mesure de l'entropie et du gain d'entropie
 
@@ -186,3 +178,25 @@ sapply(c('Age', 'Gender', 'Stay_In_Current_City_Years', 'Occupation', 'Marital_S
 ```
 
 Deux catégories importantes : Age et Occupation. 
+
+```{r}
+bf.numeric <- na.omit(bf[, -c(1, 2, 3, 4, 6, 7)])
+bf.scaled <- scale(bf.numeric, center=T, scale=T)
+bf.corr <- round(cor(bf.scaled), 2)
+bf.corr_melted <- melt(bf.corr)
+ggplot(data = bf.corr_melted, aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white",
+                       midpoint = 0, limit = c(-1,1), space = "Lab",
+                       name="Pearson\nCorrelation") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, 
+                                   size = 12, hjust = 1)) +
+  coord_fixed()
+```
+
+```{r}
+bf.pca <- princomp(bf.scaled)
+bf.kmeans <- kmeans(bf.pca$scores[, c(1,2)], 10)
+plot(bf.pca$scores[, c(1,2)], col=bf.kmeans$cluster)
+```

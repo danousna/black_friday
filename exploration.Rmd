@@ -1,6 +1,11 @@
 ---
 title: "Exploration des données"
-output: html_document
+author: Arnaud Vanholderbeke, Benjamin Loriot et Natan Danous
+date: 11 Mai 2019
+output:
+  pdf_document:
+    toc: true
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -46,95 +51,98 @@ bf$Product_Category_3 <- factor(bf$Product_Category_3, levels = c('3', '4', '5',
 ### Sexe
 
 ```{r}
-ggplot(data = bf) + 
-  geom_bar(mapping = aes(x = Gender, y = ..count.., fill = Gender)) + 
+ggplot(data = bf) +
+  geom_bar(mapping = aes(x = Gender, y = ..count.., fill = Gender)) +
   labs(title = 'Sexe des clients')
 ```
 
 ### Age
 
 ```{r}
-ggplot(data = bf) + 
-  geom_bar(mapping = aes(x = Age, y = ..count.., fill = Age)) + 
+ggplot(data = bf) +
+  geom_bar(mapping = aes(x = Age, y = ..count.., fill = Age)) +
   labs(title = 'Age des clients')
 ```
 
 La distribution de l'age dans une population suit habituellement une loi normale. On observe ici que ce n'est pas le cas. Il apparait que la tranche d'âge des 26-35 effectue le plus d'achats lors du Black Friday.
 
+```{r}
+purchase_sum = aggregate(
+  bf$Purchase,
+  list(User_ID = bf$User_ID, Gender = bf$Gender, City_Category = bf$City_Category, Age = bf$Age),
+  sum
+)
+
+ggplot(purchase_sum, aes(x = Age, y = x, fill=Age)) +
+  geom_bar(stat = "summary", fun.y = "mean") +
+  labs(title = 'Dépenses total selon l\'âge')
+```
+
 ### Métier
 
 ```{r}
-ggplot(data = bf) + 
-  geom_bar(mapping = aes(x = Occupation, y = ..count.., fill = Occupation)) + 
+ggplot(data = bf) +
+  geom_bar(mapping = aes(x = Occupation, y = ..count.., fill = Occupation)) +
   labs(title = 'Métier des clients')
 ```
 
 ### Type de ville
 
 ```{r}
-ggplot(data = bf) + 
-  geom_bar(mapping = aes(x = City_Category, y = ..count.., fill = City_Category)) + 
+ggplot(data = bf) +
+  geom_bar(mapping = aes(x = City_Category, y = ..count.., fill = City_Category)) +
   labs(title = 'Type de ville des clients')
 ```
 
 ### Ancienneté dans la ville
 
 ```{r}
-ggplot(data = bf) + 
-  geom_bar(mapping = aes(x = Stay_In_Current_City_Years, y = ..count.., fill = Stay_In_Current_City_Years)) + 
+ggplot(data = bf) +
+  geom_bar(mapping = aes(x = Stay_In_Current_City_Years, y = ..count.., fill = Stay_In_Current_City_Years)) +
   labs(title = 'Ancienneté dans la ville des clients')
 ```
 
 ### Situation conjugale
 
 ```{r}
-ggplot(data = bf) + 
-  geom_bar(mapping = aes(x = Marital_Status, y = ..count.., fill = Marital_Status)) + 
+ggplot(data = bf) +
+  geom_bar(mapping = aes(x = Marital_Status, y = ..count.., fill = Marital_Status)) +
   labs(title = 'Situation conjugale des clients')
 ```
 
 ### Catégories des produits
 
 ```{r}
-ggplot(data = bf) + 
-  geom_bar(mapping = aes(x = Product_Category_1, y = ..count.., fill = Product_Category_1)) + 
+ggplot(data = bf) +
+  geom_bar(mapping = aes(x = Product_Category_1, y = ..count.., fill = Product_Category_1)) +
   labs(title = 'Catégorie de produit 1')
 ```
 
 ```{r}
-ggplot(data = bf) + 
-  geom_bar(mapping = aes(x = Product_Category_2, y = ..count.., fill = Product_Category_2)) + 
+ggplot(data = bf) +
+  geom_bar(mapping = aes(x = Product_Category_2, y = ..count.., fill = Product_Category_2)) +
   labs(title = 'Catégorie de produit 2')
 ```
 
 ```{r}
-ggplot(data = bf) + 
-  geom_bar(mapping = aes(x = Product_Category_3, y = ..count.., fill = Product_Category_3)) + 
+ggplot(data = bf) +
+  geom_bar(mapping = aes(x = Product_Category_3, y = ..count.., fill = Product_Category_3)) +
   labs(title = 'Catégorie de produit 3')
 ```
 
 ### Performance des produits
 
 ```{r}
-bf.by_product_id <- bf %>% group_by(Product_ID) %>% summarise(Purchase = sum(Purchase)) %>% arrange(desc(Purchase))
-ggplot(data = bf.by_product_id[1:25,], aes(x = reorder(Product_ID, -Purchase), y = Purchase)) +
+bf.by_product_id <- bf %>% group_by(Product_ID) %>% summarise(Quantity = n()) %>% arrange(desc(Quantity))
+ggplot(data = bf.by_product_id[1:25,], aes(x = reorder(Product_ID, -Quantity), y = Quantity)) +
   geom_bar(stat = 'identity') +
-  labs(title = 'Classement des 25 meilleurs produits selon le nombre de ventes')
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1,
+                                   size = 12, hjust = 1)) +
+  labs(title = 'Classement des 25 meilleurs produits selon le nombre de ventes', x = 'Product ID', y = 'Quantité vendue')
 ```
 
-Pas de produit que se détache du reste (du moins dans les 25 premiers, il faut garder à l'esprit qu'il y en a +3000).
-
-## Relations
-
-Sociologie
-
-- Age
-- Métier
-- Ancienneté dans la ville
-- Marié, pas marié
-- Sexe
-
-=> Montant achat en fonction de l'age, métier, etc...
+Le premier produit se détache du reste.
 
 Commercial
 
@@ -146,8 +154,8 @@ Commercial
 ```{r gender}
 bf_gender = bf %>% select(User_ID, Gender) %>% group_by(User_ID) %>% distinct()
 summary(bf_gender)
-ggplot(data = bf) + 
-  geom_bar(mapping = aes(x = Age, y = ..count.., fill = Age), position=position_dodge()) + 
+ggplot(data = bf) +
+  geom_bar(mapping = aes(x = Age, y = ..count.., fill = Age), position=position_dodge()) +
   labs(title = 'Age and gender of Customers')
 ```
 
@@ -157,13 +165,16 @@ purchase_sum = aggregate(bf$Purchase,
           sum)
 
 summary(purchase_sum)
-ggplot(purchase_sum, aes(x = Age, y = x, fill=Age)) + 
+ggplot(purchase_sum, aes(x = Age, y = x, fill=Age)) +
   geom_bar(stat = "summary", fun.y = "mean") +
   labs(title = 'Avg total purchase depending on the age of Customers')
 ```
 
 
 ## Mesure de l'entropie et du gain d'entropie
+
+TODO: A expliquer et justifier et synthétiser.
+
 
 ```{r entropy}
 library(entropy)
@@ -186,16 +197,17 @@ sapply(c('Age', 'Gender', 'Stay_In_Current_City_Years', 'Occupation', 'Marital_S
     sells$prob = sells$count / sum(sells$count)
     return(list(prob=sells$prob, sum=s))
   })
-  
+
   entropy_sum <- function(acc,cur) {
-    acc + entropy(sells_city[,cur]$prob) *  sells_city[, cur]$sum / global_sells_sum # 
+    acc + entropy(sells_city[,cur]$prob) *  sells_city[, cur]$sum / global_sells_sum #
   }
-  
+
   entropy_gain = entropy(global_sells$prob) - Reduce(entropy_sum, discriminators, 0)
   entropy_gain
 })
 ```
-Deux catégories importantes : Age et Occupation. 
+
+Deux catégories importantes : Age et Occupation.
 
 ## Embedding des client (+ clustering)
 
@@ -237,7 +249,7 @@ X <- X[,-1]
     return(row / sqrt(sum(row*row)))
   }))
 ```
-    
+
 ```{r}
   ages = bf %>%
     group_by(User_ID,Age, Gender, Occupation,City_Category, Marital_Status) %>%
@@ -250,13 +262,15 @@ X <- X[,-1]
   scatterplot3d(acp.r$x[,1:3], pch = as.numeric(ages$Age), color = as.factor(user_pc_kmeans$cluster),
               grid=TRUE, box=TRUE, angle=55)
 ages$Cluster = user_pc_kmeans$cluster
-  #scatter3D(acp.r$x[,1],acp.r$x[,2],acp.r$x[,3], 
+  #scatter3D(acp.r$x[,1],acp.r$x[,2],acp.r$x[,3],
   #          col.var = as.integer(user_pc_kmeans$cluster),
   #          col = c("#1B9E77", "#D95F02", "#7570B3"))
-ggplot(data = ages) + 
-  geom_bar(mapping = aes(x = Age, y = ..count.., fill=cluster), position=position_dodge()) + 
+ggplot(data = ages) +
+  geom_bar(mapping = aes(x = Age, y = ..count.., fill=cluster), position=position_dodge()) +
   labs(title = 'Age des clients')
-ggplot(data = ages) + 
-  geom_bar(mapping = aes(x = Occupation, y = ..count.., fill = as.factor(Cluster)), position=position_dodge()) + 
+ggplot(data = ages) +
+  geom_bar(mapping = aes(x = Occupation, y = ..count.., fill = as.factor(Cluster)), position=position_dodge()) +
   labs(title = 'Age and gender of Customers')
+
+
 ```

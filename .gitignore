@@ -1,2 +1,4 @@
 .Rhistory
 *.html
+.ipynb_checkpoints/
+exploration_files/

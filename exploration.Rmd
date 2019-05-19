@@ -7,6 +7,9 @@ output: html_document
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(knitr)
+library(ggfortify)
+library("plot3D")
+library("scatterplot3d")
 bf <- read.csv("dataset.csv", header=T)
 ```
 
@@ -140,30 +143,6 @@ Commercial
 
 ## Visu
 
-```{r readcsvdata}
-bf <- read.csv("dataset.csv", header=T)
-bf$Marital_Status = factor(
-  bf$Marital_Status,
-  levels=c('1','0')
-)
-bf$Stay_In_Current_City_Years = factor(
-  bf$Stay_In_Current_City_Years,
-  levels=c('0','1','2','3','4+'),
-  ordered = TRUE
-)
-bf$Stay_In_Current_City_Years = factor(
-  bf$Stay_In_Current_City_Years,
-  levels=c('0','1','2','3','4+'),
-  ordered = TRUE
-)
-bf$Occupation = factor(
-  bf$Occupation,
-  levels=0:20
-)
-summary(bf)
-head(bf)
-```
-
 ```{r gender}
 bf_gender = bf %>% select(User_ID, Gender) %>% group_by(User_ID) %>% distinct()
 summary(bf_gender)
@@ -182,14 +161,9 @@ ggplot(purchase_sum, aes(x = Age, y = x, fill=Age)) +
   geom_bar(stat = "summary", fun.y = "mean") +
   labs(title = 'Avg total purchase depending on the age of Customers')
 ```
-```{r}
-ggplot(bf, aes(x = Age, y = Purchase, fill=Age)) + 
-  geom_bar(stat = "count", fun.y = "count") +
-  labs(title = 'Avg total purchase depending on the age of Customers')
-```
 
 
-# Mesure de l'entropie et du gain d'entropie
+## Mesure de l'entropie et du gain d'entropie
 
 ```{r entropy}
 library(entropy)
@@ -222,3 +196,67 @@ sapply(c('Age', 'Gender', 'Stay_In_Current_City_Years', 'Occupation', 'Marital_S
 })
 ```
 Deux catégories importantes : Age et Occupation. 
+
+## Embedding des client (+ clustering)
+
+```{r}
+categories =  c('1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18')
+user_pc <- sapply(unique(bf$User_ID), function(user){
+  user_data <- bf[bf$User_ID == user,]
+  cat_count <- matrix(0, length(categories), 1, dimnames = list(categories, c(user)))
+  #print(as.numeric(rownames(user_data)))
+  for (line in as.numeric(rownames(user_data))){
+    PC_1 <- as.numeric(bf[line,]$Product_Category_1)
+    cat_count[PC_1] <- cat_count[PC_1] + 1
+    if (! is.na(bf[line,]$Product_Category_2)){
+      PC_2 <- as.numeric(bf[line,]$Product_Category_2)
+      cat_count[PC_2] <- cat_count[PC_2] + 1
+    }
+    if (! is.na(bf[line,]$Product_Category_3)){
+      PC_3 <- as.numeric(bf[line,]$Product_Category_3)
+      cat_count[PC_3] <- cat_count[PC_3] + 1
+    }
+  }
+  #cat_count[length(categories) + 1] = user
+  cat_count
+})
+```
+```{r}
+X <- bf %>% group_by(User_ID, Product_Category_1) %>% summarise(Purchase = sum(Purchase)) %>% spread(key = Product_Category_1, value = Purchase, fill = 0)
+# Remove User_ID
+X <- X[,-1]
+# Scale
+#X <- scale(X, T, T)
+```
+
+```{r}
+  colnames(user_pc) <- unique(bf$User_ID)
+  rownames(user_pc) <- as.numeric(categories)
+  user_pc_df <- as.data.frame(t(user_pc)[, 1:18])
+  n_user_pc_df <- t(apply(user_pc_df, MARGIN = 1, function(row){
+    return(row / sqrt(sum(row*row)))
+  }))
+```
+    
+```{r}
+  ages = bf %>%
+    group_by(User_ID,Age, Gender, Occupation,City_Category, Marital_Status) %>%
+    summarise(count=n())
+  user_pc_kmeans <- kmeans(n_user_pc_df, centers = 5, nstart = 100)
+  #
+  r_df <- n_user_pc_df[1:1000,]
+  autoplot(kmeans(r_df, centers = 5, nstart = 100), data = r_df, shape = as.factor(ages$Gender[1:1000]))
+  acp.r <- prcomp(n_user_pc_df)
+  scatterplot3d(acp.r$x[,1:3], pch = as.numeric(ages$Age), color = as.factor(user_pc_kmeans$cluster),
+              grid=TRUE, box=TRUE, angle=55)
+ages$Cluster = user_pc_kmeans$cluster
+  #scatter3D(acp.r$x[,1],acp.r$x[,2],acp.r$x[,3], 
+  #          col.var = as.integer(user_pc_kmeans$cluster),
+  #          col = c("#1B9E77", "#D95F02", "#7570B3"))
+ggplot(data = ages) + 
+  geom_bar(mapping = aes(x = Age, y = ..count.., fill=cluster), position=position_dodge()) + 
+  labs(title = 'Age des clients')
+ggplot(data = ages) + 
+  geom_bar(mapping = aes(x = Occupation, y = ..count.., fill = as.factor(Cluster)), position=position_dodge()) + 
+  labs(title = 'Age and gender of Customers')
+```

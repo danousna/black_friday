@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(knitr)
 library(ggfortify)
+library(class)
 library("plot3D")
 library("scatterplot3d")
 bf <- read.csv("dataset.csv", header=T)
@@ -242,35 +243,22 @@ X <- X[,-1]
 ```
 
 ```{r}
-  colnames(user_pc) <- unique(bf$User_ID)
-  rownames(user_pc) <- as.numeric(categories)
-  user_pc_df <- as.data.frame(t(user_pc)[, 1:18])
-  n_user_pc_df <- t(apply(user_pc_df, MARGIN = 1, function(row){
-    return(row / sqrt(sum(row*row)))
-  }))
+colnames(user_pc) <- unique(bf$User_ID)
+rownames(user_pc) <- as.numeric(categories)
+user_pc_df <- as.data.frame(t(user_pc)[, 1:18])
+n_user_pc_df <- t(apply(user_pc_df, MARGIN = 1, function(row){
+  return(row / sqrt(sum(row*row)))
+}))
 ```
 
 ```{r}
-  ages = bf %>%
-    group_by(User_ID,Age, Gender, Occupation,City_Category, Marital_Status) %>%
-    summarise(count=n())
-  user_pc_kmeans <- kmeans(n_user_pc_df, centers = 5, nstart = 100)
-  #
-  r_df <- n_user_pc_df[1:1000,]
-  autoplot(kmeans(r_df, centers = 5, nstart = 100), data = r_df, shape = as.factor(ages$Gender[1:1000]))
-  acp.r <- prcomp(n_user_pc_df)
-  scatterplot3d(acp.r$x[,1:3], pch = as.numeric(ages$Age), color = as.factor(user_pc_kmeans$cluster),
-              grid=TRUE, box=TRUE, angle=55)
-ages$Cluster = user_pc_kmeans$cluster
-  #scatter3D(acp.r$x[,1],acp.r$x[,2],acp.r$x[,3],
-  #          col.var = as.integer(user_pc_kmeans$cluster),
-  #          col = c("#1B9E77", "#D95F02", "#7570B3"))
-ggplot(data = ages) +
-  geom_bar(mapping = aes(x = Age, y = ..count.., fill=cluster), position=position_dodge()) +
-  labs(title = 'Age des clients')
-ggplot(data = ages) +
-  geom_bar(mapping = aes(x = Occupation, y = ..count.., fill = as.factor(Cluster)), position=position_dodge()) +
-  labs(title = 'Age and gender of Customers')
 
-
+ran <- sample(1:nrow(n_user_pc_df), 0.70 * nrow(n_user_pc_df))
+user_train <- as.data.frame(n_user_pc_df[ran,])
+user_test <- n_user_pc_df[-ran,]
+user_train_cat <- as.factor(as.matrix(purchase_sum[sapply(purchase_sum['User_ID'], function(x) {x %in% rownames(user_train)}),]['Gender']))
+user_test_cat <- as.factor(as.matrix(purchase_sum[sapply(purchase_sum['User_ID'], function(x) {x %in% rownames(user_test)}),]['Gender']))
+pr <- knn(user_train,user_test,cl=user_train_cat,k=9)
+tab <- table(pr,user_test_cat)
+tab
 ```

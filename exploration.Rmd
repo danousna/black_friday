@@ -6,12 +6,16 @@ output:
   pdf_document:
     toc: true
   html_document: default
+classoption: twocolumn
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(knitr)
+library(reshape2)
+library(gridExtra)
+library(class)
 library(ggfortify)
 library(class)
 library("plot3D")
@@ -117,13 +121,11 @@ ggplot(data = bf) +
 ggplot(data = bf) +
   geom_bar(mapping = aes(x = Product_Category_1, y = ..count.., fill = Product_Category_1)) +
   labs(title = 'Catégorie de produit 1')
-```
 
 ```{r}
 ggplot(data = bf) +
   geom_bar(mapping = aes(x = Product_Category_2, y = ..count.., fill = Product_Category_2)) +
   labs(title = 'Catégorie de produit 2')
-```
 
 ```{r}
 ggplot(data = bf) +
@@ -171,6 +173,8 @@ ggplot(purchase_sum, aes(x = Age, y = x, fill=Age)) +
   labs(title = 'Avg total purchase depending on the age of Customers')
 ```
 
+
+## Corrélation entre les variables
 
 ## Mesure de l'entropie et du gain d'entropie
 
@@ -241,18 +245,42 @@ X <- X[,-1]
 # Scale
 #X <- scale(X, T, T)
 ```
-
 ```{r}
-colnames(user_pc) <- unique(bf$User_ID)
-rownames(user_pc) <- as.numeric(categories)
-user_pc_df <- as.data.frame(t(user_pc)[, 1:18])
-n_user_pc_df <- t(apply(user_pc_df, MARGIN = 1, function(row){
-  return(row / sqrt(sum(row*row)))
-}))
+# Get amount and quantity purchased per users.
+X <- bf %>% group_by(User_ID) %>% summarise(Purchase = sum(Purchase))
+# Remove User_ID
+X <- X[,-1]
+# Scale
+X <- scale(X, T, T)
+
+
+
+# Find number of clusters
+inerties_min = c()
+for (k in 1:10) {
+  inerties <- c()
+  #for (iter in 1:100) {
+    #centering <- kmeans(x = iris.scaled, centers=k)
+    #inerties[iter] <- centering$tot.withinss
+  #}
+  inerties_min[k] <- kmeans(X, k, nstart = 100)$tot.withinss
+  # min(inerties)
+}
+barplot(inerties_min)
+
+# Avec la méthode du coude, on prend k = 4 classes.
+# bf.kmeans <- kmeans(X, 4)
+
+# plot(data.frame(X, 1), col=bf.kmeans$cluster, type = 'b')
+
+# bf.pca <- princomp(scale(X, T, T))
+# plot(bf.pca$scores[,1:2], col=bf.kmeans$cluster)
 ```
 
-```{r}
+### Classificatin supervisée
 
+#### Knn 
+```{r}
 ran <- sample(1:nrow(n_user_pc_df), 0.70 * nrow(n_user_pc_df))
 user_train <- as.data.frame(n_user_pc_df[ran,])
 user_test <- n_user_pc_df[-ran,]
@@ -261,4 +289,55 @@ user_test_cat <- as.factor(as.matrix(purchase_sum[sapply(purchase_sum['User_ID']
 pr <- knn(user_train,user_test,cl=user_train_cat,k=9)
 tab <- table(pr,user_test_cat)
 tab
+
+```
+
+#### Random forest
+
+```{r}
+# Get amount purchased per users for each category of product.
+X <- bf %>% group_by(User_ID, Occupation, Product_Category_1) %>% summarise(Purchase = sum(Purchase)) %>% spread(key = Product_Category_1, value = Purchase, fill = 0)
+# Remove User_ID
+X <- X[,-1]
+
+# Generate a random number that is 90% of the total number of rows in the dataset.
+ran <- sample(1:nrow(X), 0.9 * nrow(X))
+
+# Normalization function
+nor <- function(x) { (x - min(x)) / (max(x) - min(x)) }
+
+# Run nor on every column except Gender
+X_norm <- as.data.frame(lapply(X[, 2:19], nor))
+
+# Extract training set
+Xapp <- X_norm[ran,]
+
+# Extract test set
+Xtst <- X_norm[-ran,]
+
+# Extract the first column of train dataset
+X_target_category <- X_norm[ran, 1]
+
+# Extract the first column of test dataset to measure accuracy
+X_test_category <- X_norm[-ran, 1]
+
+pr <- knn(Xapp, Xtst, cl = X_target_category, k = 13)
+
+tab <- table(pr, X_test_category)
+
+accuracy <- function(x) { sum(diag(x) / (sum(rowSums(x)))) * 100}
+accuracy(tab)
+```
+
+#### Régression logistique
+
+```{r}
+# On veut trouver le prochain produit OU la prochaine catégorie que l'utilisateur va acheter.
+# Cela dépend de ses facteurs socio-cultu. 
+
+library(caret)
+library(nnet)
+
+# bf$Product_Category_1 <- relevel(bf$Product_Category_1, ref="1")
+# test <- multinom(Product_Category_1 ~ Age + Purchase, data = bf)
 ```

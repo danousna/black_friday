@@ -6,6 +6,7 @@ output:
   pdf_document:
     toc: true
   html_document: default
+classoption: twocolumn
 ---
 
 ```{r setup, include=FALSE}
@@ -13,6 +14,8 @@ knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(knitr)
 library(reshape2)
+library(gridExtra)
+library(class)
 bf <- read.csv("dataset.csv", header=T)
 ```
 
@@ -111,21 +114,19 @@ ggplot(data = bf) +
 ### Catégories des produits
 
 ```{r}
-ggplot(data = bf) + 
+p1 <- ggplot(data = bf) + 
   geom_bar(mapping = aes(x = Product_Category_1, y = ..count.., fill = Product_Category_1)) + 
   labs(title = 'Catégorie de produit 1')
-```
 
-```{r}
-ggplot(data = bf) + 
+p2 <- ggplot(data = bf) + 
   geom_bar(mapping = aes(x = Product_Category_2, y = ..count.., fill = Product_Category_2)) + 
   labs(title = 'Catégorie de produit 2')
-```
 
-```{r}
-ggplot(data = bf) + 
+p3 <- ggplot(data = bf) + 
   geom_bar(mapping = aes(x = Product_Category_3, y = ..count.., fill = Product_Category_3)) + 
   labs(title = 'Catégorie de produit 3')
+
+grid.arrange(p1, p2, p3, ncol = 2)
 ```
 
 ### Performance des produits
@@ -141,6 +142,8 @@ ggplot(data = bf.by_product_id[1:25,], aes(x = reorder(Product_ID, -Quantity), y
 ```
 
 Le premier produit se détache du reste.
+
+## Corrélation entre les variables
 
 ## Mesure de l'entropie et du gain d'entropie
 
@@ -177,26 +180,147 @@ sapply(c('Age', 'Gender', 'Stay_In_Current_City_Years', 'Occupation', 'Marital_S
 })
 ```
 
-Deux catégories importantes : Age et Occupation. 
+## Classification
+
+Notre jeu de données concerne les achats effectués par des consommateurs lors de la période du Black Friday, on peut imaginer que l'on souhaite tirer de ces données, des groupes de consommateur.
+
+- On dispose déjà de certains groupes, par exemple la variable sexe en forme un, le métier également. On peut donc essayer de déterminer si ces groupes sociaux ont des comportements de consommation similaires. C'est un problème de classification supervisée.
+
+- On peut également souhaiter déterminer des groupes indépendamment des paramètres sociaux. C'est un problème de classification non supervisée.
+
+### Classificatin non supervisée
 
 ```{r}
-bf.numeric <- na.omit(bf[, -c(1, 2, 3, 4, 6, 7)])
-bf.scaled <- scale(bf.numeric, center=T, scale=T)
-bf.corr <- round(cor(bf.scaled), 2)
-bf.corr_melted <- melt(bf.corr)
-ggplot(data = bf.corr_melted, aes(x=Var1, y=Var2, fill=value)) + 
+# Get amount purchased per users for each category of product.
+X <- bf %>% group_by(User_ID, Product_Category_1) %>% summarise(Purchase = sum(Purchase)) %>% spread(key = Product_Category_1, value = Purchase, fill = 0)
+# Remove User_ID
+X <- X[,-1]
+# Scale
+X <- scale(X, T, T)
+
+
+# Get correlation matrix
+X.cor <- round(cor(X), 2)
+# Reorder
+hc <- hclust(as.dist((1 - X.cor) / 2))
+X.cor <- X.cor[hc$order, hc$order]
+# Get upper tri
+X.cor[lower.tri(X.cor)] <- NA 
+# Melt
+X.cor_melted <- melt(X.cor, na.rm = T)
+# Plot
+ggplot(X.cor_melted, aes(Var2, Var1, fill = value)) +
   geom_tile(color = "white") +
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white",
-                       midpoint = 0, limit = c(-1,1), space = "Lab",
-                       name="Pearson\nCorrelation") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                      midpoint = 0, limit = c(-1,1), space = "Lab",
+                      name="Pearson\nCorrelation") + 
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, 
                                    size = 12, hjust = 1)) +
   coord_fixed()
+
+
+# Find number of clusters
+inerties_min = c()
+for (k in 1:5) {
+  inerties <- c()
+  #for (iter in 1:100) {
+    #centering <- kmeans(x = iris.scaled, centers=k)
+    #inerties[iter] <- centering$tot.withinss
+  #}
+  inerties_min[k] <- kmeans(X, k, nstart = 100)$tot.withinss
+  # min(inerties)
+}
+barplot(inerties_min)
+
+# Avec la méthode du coude, on prend k = 2 classes.
+bf.kmeans <- kmeans(X, 2)
+
+plot(X, col=bf.kmeans$cluster)
+
+bf.pca <- princomp(scale(X, T, T))
+plot(bf.pca$scores[,1:2], col=bf.kmeans$cluster)
 ```
 
+
 ```{r}
-bf.pca <- princomp(bf.scaled)
-bf.kmeans <- kmeans(bf.pca$scores[, c(1,2)], 10)
-plot(bf.pca$scores[, c(1,2)], col=bf.kmeans$cluster)
+# Get amount and quantity purchased per users.
+X <- bf %>% group_by(User_ID) %>% summarise(Purchase = sum(Purchase))
+# Remove User_ID
+X <- X[,-1]
+# Scale
+X <- scale(X, T, T)
+
+
+
+# Find number of clusters
+inerties_min = c()
+for (k in 1:10) {
+  inerties <- c()
+  #for (iter in 1:100) {
+    #centering <- kmeans(x = iris.scaled, centers=k)
+    #inerties[iter] <- centering$tot.withinss
+  #}
+  inerties_min[k] <- kmeans(X, k, nstart = 100)$tot.withinss
+  # min(inerties)
+}
+barplot(inerties_min)
+
+# Avec la méthode du coude, on prend k = 4 classes.
+# bf.kmeans <- kmeans(X, 4)
+
+# plot(data.frame(X, 1), col=bf.kmeans$cluster, type = 'b')
+
+# bf.pca <- princomp(scale(X, T, T))
+# plot(bf.pca$scores[,1:2], col=bf.kmeans$cluster)
+```
+
+### Classificatin supervisée
+
+```{r}
+# Get amount purchased per users for each category of product.
+X <- bf %>% group_by(User_ID, Occupation, Product_Category_1) %>% summarise(Purchase = sum(Purchase)) %>% spread(key = Product_Category_1, value = Purchase, fill = 0)
+# Remove User_ID
+X <- X[,-1]
+
+# Generate a random number that is 90% of the total number of rows in the dataset.
+ran <- sample(1:nrow(X), 0.9 * nrow(X))
+
+# Normalization function
+nor <- function(x) { (x - min(x)) / (max(x) - min(x)) }
+
+# Run nor on every column except Gender
+X_norm <- as.data.frame(lapply(X[, 2:19], nor))
+
+# Extract training set
+Xapp <- X_norm[ran,]
+
+# Extract test set
+Xtst <- X_norm[-ran,]
+
+# Extract the first column of train dataset
+X_target_category <- X_norm[ran, 1]
+
+# Extract the first column of test dataset to measure accuracy
+X_test_category <- X_norm[-ran, 1]
+
+pr <- knn(Xapp, Xtst, cl = X_target_category, k = 13)
+
+tab <- table(pr, X_test_category)
+
+accuracy <- function(x) { sum(diag(x) / (sum(rowSums(x)))) * 100}
+accuracy(tab)
+```
+
+### Régression logistique
+
+```{r}
+# On veut trouver le prochain produit OU la prochaine catégorie que l'utilisateur va acheter.
+# Cela dépend de ses facteurs socio-cultu. 
+
+library(caret)
+library(nnet)
+
+# bf$Product_Category_1 <- relevel(bf$Product_Category_1, ref="1")
+# test <- multinom(Product_Category_1 ~ Age + Purchase, data = bf)
 ```

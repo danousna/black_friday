@@ -17,7 +17,6 @@ library(reshape2)
 library(gridExtra)
 library(class)
 library(ggfortify)
-library(class)
 library("plot3D")
 library("scatterplot3d")
 bf <- read.csv("dataset.csv", header=T)
@@ -121,12 +120,12 @@ ggplot(data = bf) +
 ggplot(data = bf) +
   geom_bar(mapping = aes(x = Product_Category_1, y = ..count.., fill = Product_Category_1)) +
   labs(title = 'Catégorie de produit 1')
-
+```
 ```{r}
 ggplot(data = bf) +
   geom_bar(mapping = aes(x = Product_Category_2, y = ..count.., fill = Product_Category_2)) +
   labs(title = 'Catégorie de produit 2')
-
+```
 ```{r}
 ggplot(data = bf) +
   geom_bar(mapping = aes(x = Product_Category_3, y = ..count.., fill = Product_Category_3)) +
@@ -238,6 +237,19 @@ user_pc <- sapply(unique(bf$User_ID), function(user){
   cat_count
 })
 ```
+
+```{r}
+n_user_pc <- t(apply(user_pc, 2, function(line){
+  squared_line <- sapply(line, function(x){x*x})
+  s <- sqrt(sum(squared_line))
+  sapply(line, function(x){x/s})
+}))
+n_user_pc_df <- as.data.frame(n_user_pc)
+rownames(n_user_pc_df) <- unique(bf$User_ID)
+#n_user_pc_df.columns <- categories
+n_user_pc_df
+```
+
 ```{r}
 X <- bf %>% group_by(User_ID, Product_Category_1) %>% summarise(Purchase = sum(Purchase)) %>% spread(key = Product_Category_1, value = Purchase, fill = 0)
 # Remove User_ID
@@ -284,12 +296,14 @@ barplot(inerties_min)
 ran <- sample(1:nrow(n_user_pc_df), 0.70 * nrow(n_user_pc_df))
 user_train <- as.data.frame(n_user_pc_df[ran,])
 user_test <- n_user_pc_df[-ran,]
-user_train_cat <- as.factor(as.matrix(purchase_sum[sapply(purchase_sum['User_ID'], function(x) {x %in% rownames(user_train)}),]['Gender']))
-user_test_cat <- as.factor(as.matrix(purchase_sum[sapply(purchase_sum['User_ID'], function(x) {x %in% rownames(user_test)}),]['Gender']))
+user_train_cat <- sapply(as.list(rownames(user_train)), function(id){purchase_sum[purchase_sum['User_ID'] == id,'Gender']})
+user_test_cat <- sapply(as.list(rownames(user_test)), function(id){purchase_sum[purchase_sum['User_ID'] == id,'Gender']})
 pr <- knn(user_train,user_test,cl=user_train_cat,k=9)
-tab <- table(pr,user_test_cat)
-tab
-
+confusion_matrix_knn <- table(pr,user_test_cat)
+confusion_matrix_knn_normalised <- t(apply(tab, 1, function(line){
+  line / sum(line)
+}))
+confusion_matrix_knn_normalised
 ```
 
 #### Random forest

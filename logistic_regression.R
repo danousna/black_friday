@@ -27,8 +27,9 @@ set.seed(9864)
 
 bf_subset <- bf[sample(nrow(bf), 10000), ]
 
-train <- bf_subset %>% sample_frac(0.8)
-test <- anti_join(bf_subset, train)
+ran <- sample(1:nrow(bf_subset), 0.80 * nrow(bf_subset))
+train <- as.data.frame(bf_subset[ran,])
+test <- bf_subset[-ran,]
 
 model <- glm(Marital_Status ~., family = binomial(link='logit'), data = train)
 summary(model)
@@ -38,3 +39,5 @@ fitted.results <- ifelse(fitted.results > 0.5,1,0)
 
 misClasificError <- mean(fitted.results != test$Marital_Status)
 print(paste('Accuracy',1-misClasificError))
+
+confusion_matrix <- table(fitted.results, test$Marital_Status)

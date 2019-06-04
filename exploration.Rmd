@@ -55,6 +55,7 @@ bf$Product_Category_3 <- factor(bf$Product_Category_3, levels = c('3', '4', '5',
 ### Sexe
 
 ```{r}
+options(scipen=10000)
 ggplot(data = bf) +
   geom_bar(mapping = aes(x = Gender, y = ..count.., fill = Gender)) +
   labs(title = 'Sexe des clients')
@@ -120,12 +121,12 @@ ggplot(data = bf) +
 ggplot(data = bf) +
   geom_bar(mapping = aes(x = Product_Category_1, y = ..count.., fill = Product_Category_1)) +
   labs(title = 'Catégorie de produit 1')
-```
+
 ```{r}
 ggplot(data = bf) +
   geom_bar(mapping = aes(x = Product_Category_2, y = ..count.., fill = Product_Category_2)) +
   labs(title = 'Catégorie de produit 2')
-```
+
 ```{r}
 ggplot(data = bf) +
   geom_bar(mapping = aes(x = Product_Category_3, y = ..count.., fill = Product_Category_3)) +
@@ -237,19 +238,6 @@ user_pc <- sapply(unique(bf$User_ID), function(user){
   cat_count
 })
 ```
-
-```{r}
-n_user_pc <- t(apply(user_pc, 2, function(line){
-  squared_line <- sapply(line, function(x){x*x})
-  s <- sqrt(sum(squared_line))
-  sapply(line, function(x){x/s})
-}))
-n_user_pc_df <- as.data.frame(n_user_pc)
-rownames(n_user_pc_df) <- unique(bf$User_ID)
-#n_user_pc_df.columns <- categories
-n_user_pc_df
-```
-
 ```{r}
 X <- bf %>% group_by(User_ID, Product_Category_1) %>% summarise(Purchase = sum(Purchase)) %>% spread(key = Product_Category_1, value = Purchase, fill = 0)
 # Remove User_ID
@@ -257,6 +245,7 @@ X <- X[,-1]
 # Scale
 #X <- scale(X, T, T)
 ```
+
 ```{r}
 # Get amount and quantity purchased per users.
 X <- bf %>% group_by(User_ID) %>% summarise(Purchase = sum(Purchase))
@@ -290,23 +279,6 @@ barplot(inerties_min)
 ```
 
 ### Classificatin supervisée
-
-#### Knn 
-```{r}
-ran <- sample(1:nrow(n_user_pc_df), 0.70 * nrow(n_user_pc_df))
-user_train <- as.data.frame(n_user_pc_df[ran,])
-user_test <- n_user_pc_df[-ran,]
-user_train_cat <- sapply(as.list(rownames(user_train)), function(id){purchase_sum[purchase_sum['User_ID'] == id,'Gender']})
-user_test_cat <- sapply(as.list(rownames(user_test)), function(id){purchase_sum[purchase_sum['User_ID'] == id,'Gender']})
-pr <- knn(user_train,user_test,cl=user_train_cat,k=9)
-confusion_matrix_knn <- table(pr,user_test_cat)
-confusion_matrix_knn_normalised <- t(apply(tab, 1, function(line){
-  line / sum(line)
-}))
-confusion_matrix_knn_normalised
-```
-
-#### Random forest
 
 ```{r}
 # Get amount purchased per users for each category of product.
@@ -343,7 +315,7 @@ accuracy <- function(x) { sum(diag(x) / (sum(rowSums(x)))) * 100}
 accuracy(tab)
 ```
 
-#### Régression logistique
+### Régression logistique
 
 ```{r}
 # On veut trouver le prochain produit OU la prochaine catégorie que l'utilisateur va acheter.

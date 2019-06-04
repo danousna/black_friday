@@ -45,3 +45,7 @@ bf_subset$Product_ID <- NULL
 train <- bf_subset %>% sample_frac(0.8)
 test <- anti_join(bf_subset, train)
 (model <- randomForest(Age ~ ., data = train, ntree = 200, na.action = na.omit))
+
+# Ici résultat de 40% environ. Ça prend en compte que les résultat vraiment vrai.
+# Ci on prend une métrique de 1, on tourne autour de 80% environ, donc c'est pas mal.
+# => on a sommé diag de la matrice de confusion + les diag inf et sup et divisé par length(train)

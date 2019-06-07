@@ -3,3 +3,4 @@
 .ipynb_checkpoints/
 exploration_files/
 *.RData
+.DS_Store

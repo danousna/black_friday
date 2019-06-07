@@ -1,3 +1,7 @@
+library(tidyverse)
+
+set.seed(9864)
+
 # PREPARE DATASET
 
 bf <- read.csv("dataset.csv", header=T)
@@ -18,26 +22,69 @@ bf$Product_Category_3 <- NULL
 bf$Age <- as.factor(as.numeric(bf$Age))
 bf$City_Category <- as.factor(as.numeric(bf$City_Category))
 bf$Stay_In_Current_City_Years <- as.factor(as.numeric(bf$Stay_In_Current_City_Years))
+bf$Gender <- as.numeric(bf$Gender)
+bf[which(bf$Gender==2),]$Gender <- 0
+bf$Gender <- as.factor(bf$Gender)
 
-# APPLY MODEL
+bf_male <- bf[which(bf$Gender == 0),]
+bf_female <- bf[which(bf$Gender == 1),]
 
-library(tidyverse)
+# MALE IS 0, FEMALE IS 1
 
-set.seed(9864)
+logreg <- function(train, test) {
+  model <- glm(Gender ~., family = binomial(link='logit'), data = train)
 
-bf_subset <- bf[sample(nrow(bf), 10000), ]
+  predictions <- predict(model, newdata = test, type = 'response')
+  predictions <- ifelse(predictions > 0.5,1,0)
+  
+  accuracy <- 1 - mean(predictions != test$Gender)
+  
+  confusion_matrix <- table(predictions, test$Gender)
+  confusion_matrix_melted <- apply(confusion_matrix, 2, function(line){
+    line / sum(line)
+  })
+  
+  out <- NULL
+  out$model <- model
+  out$accuracy <- accuracy
+  out$pred <- predictions
+  out$confusion_matrix <- confusion_matrix
+  out$confusion_matrix_melted <- confusion_matrix_melted
+  
+  out
+}
+
+# Naïve 
+
+bf_subset <- bf[sample(nrow(bf), 100000), ]
+ran <- sample(1:nrow(bf_subset), 0.80 * nrow(bf_subset))
+
+naive <- logreg(train = as.data.frame(bf_subset[ran,]), bf_subset[-ran,])
+
+melted_confusion_matrix <- melt(melted_confusion_matrix)
+colnames(melted_confusion_matrix) <- c('Réalité', 'Prédiction', 'values')
+confusion_matrix_naive.plot <- ggplot(data = melted_confusion_matrix, aes(x=Réalité, y=Prédiction, fill=values)) + 
+  geom_tile(aes(fill = values)) + 
+  geom_text(aes(label = round(values, 2)))
+ggsave('figures/confusion_matrix_logreg_naive.pdf', plot = confusion_matrix_naive.plot, device='pdf', width = 4, height = 3)
+  
+# Fifty
+
+bf_subset <- bf_male[sample(nrow(bf_male), 100000), ]
+bf_subset <- rbind(bf_subset, bf_female[sample(nrow(bf_female), 100000), ])
 
 ran <- sample(1:nrow(bf_subset), 0.80 * nrow(bf_subset))
-train <- as.data.frame(bf_subset[ran,])
-test <- bf_subset[-ran,]
 
-model <- glm(Marital_Status ~., family = binomial(link='logit'), data = train)
-summary(model)
+fifty <- logreg(train = as.data.frame(bf_subset[ran,]), bf_subset[-ran,])
 
-fitted.results <- predict(model,newdata=test,type='response')
-fitted.results <- ifelse(fitted.results > 0.5,1,0)
+# Clones
 
-misClasificError <- mean(fitted.results != test$Marital_Status)
-print(paste('Accuracy',1-misClasificError))
+bf_subset <- bf_male
+# We clone female x3 to reach parity with males.
+bf_subset <- rbind(bf_subset, bf_female)
+bf_subset <- rbind(bf_subset, bf_female)
+bf_subset <- rbind(bf_subset, bf_female)
 
-confusion_matrix <- table(fitted.results, test$Marital_Status)
+ran <- sample(1:nrow(bf_subset), 0.80 * nrow(bf_subset))
+
+clones <- logreg(train = as.data.frame(bf_subset[ran,]), bf_subset[-ran,])

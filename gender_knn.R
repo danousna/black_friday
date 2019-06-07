@@ -59,7 +59,7 @@ confusion_matrix_knn <- table(pr,user_test_cat)
 melted_confusion_matrix <- t(apply(confusion_matrix_knn, 1, function(line){
   line / sum(line)
 }))
-melted_confusion_matrix <- melt(confusion_matrix_knn_normalised)
+melted_confusion_matrix <- melt(melted_confusion_matrix)
 colnames(melted_confusion_matrix) <- c('Réalité', 'Prédiction', 'values')
 
 confusion_matrix.plot <- ggplot(data = melted_confusion_matrix, aes(x=Réalité, y=Prédiction, fill=values)) + 

@@ -26,26 +26,23 @@ bf$Age <- as.factor(as.numeric(bf$Age))
 bf$City_Category <- as.factor(as.numeric(bf$City_Category))
 bf$Stay_In_Current_City_Years <- as.factor(as.numeric(bf$Stay_In_Current_City_Years))
 
-# One hot encoding
-library(data.table)
-library(mltools)
-bf_1h <- one_hot(as.data.table(bf), cols = c("Gender", "Occupation", "Marital_Status", "Product_Category_1"), sparsifyNAs = TRUE)
-
-# APPLY MODEL
+bf$Gender <- as.numeric(bf$Gender)
+bf[which(bf$Gender==2),]$Gender <- 0
+bf$Gender <- as.factor(bf$Gender)
 
 library(randomForest)
 library(tidyverse)
 
 set.seed(9864)
 
-bf_subset <- bf_1h[sample(nrow(bf), 10000), ]
+bf_subset <- bf[sample(nrow(bf), 100000), ]
 bf_subset$User_ID <- NULL
 bf_subset$Product_ID <- NULL
 
-train <- bf_subset %>% sample_frac(0.8)
-test <- anti_join(bf_subset, train)
-(model <- randomForest(Age ~ ., data = train, ntree = 200, na.action = na.omit))
+ran <- sample(1:nrow(bf_subset), 0.80 * nrow(bf_subset))
 
-# Ici résultat de 40% environ. Ça prend en compte que les résultat vraiment vrai.
-# Ci on prend une métrique de 1, on tourne autour de 80% environ, donc c'est pas mal.
-# => on a sommé diag de la matrice de confusion + les diag inf et sup et divisé par length(train)
+train <- bf_subset[ran,]
+test <- bf_subset[-ran,]
+model <- randomForest(Gender ~ ., data = train, na.action = na.omit)
+pred <- predict(model, newdata = test, type = 'response')
+stats <- model_stats(test$Gender, pred)

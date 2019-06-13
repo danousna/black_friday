@@ -31,8 +31,6 @@ SMOTE <- function(P, N, k){
   
   plus_decimal_elements <- sample(1:len_P, plus_decimal)
   
-  print(plus_decimal_elements)
-  
   Synthetic <- data.frame(matrix(ncol=dim(P)[2], nrow=0))
   colnames(Synthetic) <- colnames(P)
   new_index <- 1
